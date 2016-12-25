@@ -12,7 +12,7 @@ Convert csv file to elixir map with ease
       field :name, :string, name: "Name"
       field :number, :string, name: "Number"
       field :description, :string, name: "Desc"
-      field :price, :float, name: "Price"
+      field :price, :float, name: "Price", validate: &(&1 >= 0)
       field :images, {:array, :string}, name: "Images", separator: "|"
     end
   end
