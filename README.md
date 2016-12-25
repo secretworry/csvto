@@ -1,24 +1,24 @@
 # Csvto
 
-**TODO: Add description**
+Convert csv file to elixir map with ease
 
-## Installation
+# Blueprint
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+```elixir
+  defmodule MyCsvto do
+    use Csvto.Builder
 
-  1. Add `csvto` to your list of dependencies in `mix.exs`:
-
-    ```elixir
-    def deps do
-      [{:csvto, "~> 0.1.0"}]
+    csv "product" do
+      field :name, :string, name: "Name"
+      field :number, :string, name: "Number"
+      field :description, :string, name: "Desc"
+      field :price, :float, name: "Price"
+      field :images, {:array, :string}, name: "Images", separator: "|"
     end
-    ```
+  end
 
-  2. Ensure `csvto` is started before your application:
-
-    ```elixir
-    def application do
-      [applications: [:csvto]]
-    end
-    ```
-
+  MyCsvto.from(path) # returns [Map.t]
+  MyCsvto.from(path, into: MyApp.Product) # returns [MyApp.Product.t]
+  MyCsvto.from(path, headers: ~w{number name description price images}a) # returns {:error, reason}
+  MyCsvto.from(illegal_file) # returns {:error, reason}
+```
