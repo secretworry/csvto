@@ -94,7 +94,7 @@ defmodule Csvto.Builder do
   end
 
   def __field__(meta, name, type, opts) do
-    check_type!(name, type)
+    check_type!(meta, name, type)
     index_mode = check_index_mode!(meta, name, meta[:index_mode], opts)
     fields = Module.get_attribute(meta[:module], :csvto_fields)
     check_duplicate_declaration!(meta, fields, name)
@@ -129,7 +129,7 @@ defmodule Csvto.Builder do
       nil ->
         :ok
       field ->
-        raise ArgumentError, "duplicate field declaration for field #{name} on #{meta[:line]} which has been defined on #{field.line}"
+        raise ArgumentError, "duplicate field declaration for field #{inspect name} on #{meta[:line]} which has been defined on #{field.line}"
     end
   end
 
@@ -170,23 +170,23 @@ defmodule Csvto.Builder do
         index = Keyword.get(opts, :index, index + 1)
         {:index, index}
       _name ->
-        raise ArgumentError, "cannot define name option for field #{field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
+        raise ArgumentError, "cannot define name option for field #{inspect field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
     end
   end
   defp check_index_mode!(meta, field_name, :name, opts) do
     case Keyword.get(opts, :name) do
       nil ->
-        raise ArgumentError, "Forget to define name option for field #{field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
+        raise ArgumentError, "forget to define name option for field #{inspect field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
       _name ->
         :name
     end
   end
 
-  defp check_type!(field_name, type) do
+  defp check_type!(meta, field_name, type) do
     if Csvto.Type.primitive?(type) do
       type
     else
-      raise ArgumentError, "invalid type #{inspect type} for field #{inspect field_name}"
+      raise ArgumentError, "invalid type #{inspect type} for field #{inspect field_name} defined on line #{meta[:line]}"
     end
   end
 
