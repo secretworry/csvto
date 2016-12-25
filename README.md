@@ -17,8 +17,8 @@ Convert csv file to elixir map with ease
     end
   end
 
-  MyCsvto.from(path) # returns [Map.t]
-  MyCsvto.from(path, into: MyApp.Product) # returns [MyApp.Product.t]
-  MyCsvto.from(path, headers: ~w{number name description price images}a) # returns {:error, reason}
-  MyCsvto.from(illegal_file) # returns {:error, reason}
+  MyCsvto.from(path, :product) # returns [Map.t]
+  MyCsvto.from(path, :product, into: MyApp.Product) # returns [MyApp.Product.t]
+  MyCsvto.from(path, :product, headers: ~w{number name description price images}a) # returns {:error, reason}
+  MyCsvto.from(illegal_file, :product) # returns {:error, reason}
 ```
