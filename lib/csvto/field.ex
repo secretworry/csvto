@@ -4,6 +4,7 @@ defmodule Csvto.Field do
 
   @type t :: %__MODULE__{
     name: String.t,
+    type: atom,
     required?: boolean,
     field_name: String.t | nil,
     field_index: integer | nil,
@@ -14,7 +15,6 @@ defmodule Csvto.Field do
     file: String.t
   }
 
-  @enforce_keys ~w{name}a
-  defstruct [:name, required?: true, field_name: nil, field_index: 0, validator: nil, default: nil, opts: %{}, line: 0, file: ""]
-
+  @enforce_keys ~w{name type}a
+  defstruct [:name, :type, required?: true, field_name: nil, field_index: 0, validator: nil, default: nil, opts: %{}, line: 0, file: ""]
 end

@@ -3,6 +3,8 @@ defmodule Csvto.Builder do
   Conveniences for building a Csvto
 
   This module can be `use`-d into a Module to build a Csvto
+
+  ## Example
   ```
   defmodule MyCsvto do
     use Csvto.Builder
@@ -16,8 +18,48 @@ defmodule Csvto.Builder do
     end
   end
   ```
-  Each Csvto could define several schema, each of which can be identified by its name.
+
+  ## Types and casting
+
+  When defining a schema, types of fields need to be given. The data comming from a csv file will be validated and casted
+  according to specified type.
+  Types are split into two categories, simple type and compositional type
+
+  ### Simple types
+
+  The simple types are
+  Type                      | Value example
+  :-------------------------|:------------------------------------
+  `:integer`                | 1, 2, 3
+  `:float`                  | 1.0, 2.0, 3.0
+  `:boolean`                | yes, no, no, off, 1, 0, true, false
+  `:string`                 | string
+  `:binary`                 | binary
+  `:decimal`                | 1.0, 2.0, 3.0
+  `:naive_datetime`         | `ISO8601` datetime
+  `:datetime`               | `ISO8601` with timezone
+  `date`                    | `ISO8601` date
+  `time`                    | `ISO8601` time
+
+  ### Compositional type
+
+  There is only one compositional type: `{:array, subtype}`
+  For the subtype, you can replace it with any valid simple types, such as `:string`
+
+  While parsing array from csv field, a `:separator` option could be specified to define how should the subtype
+  should be seperated, by default, it is `"|"`
+
+  ## Reflection
+
+  Any Csvto defined with `use #{__MODULE__}` will generate the `__csvto__` function that can be
+  used for runtime introspection of the shcemas:
+
+  * `__csvto__(:schemas)` - Lists all the schemas defined in this module
+  * `__csvto__(:schema, name)` - Returns the `Csvto.Schema` identified by the given name on this module
   """
+
+  @type t :: struct
+
   defmacro __using__(_opts) do
     quote do
       Module.register_attribute(__MODULE__, :csvto_schemas, accumulate: true)
@@ -113,6 +155,7 @@ defmodule Csvto.Builder do
     end
     %Csvto.Field{
       name: name,
+      type: type,
       required?: Keyword.get(opts, :required, true),
       field_name: Keyword.get(opts, :name),
       field_index: field_index,
