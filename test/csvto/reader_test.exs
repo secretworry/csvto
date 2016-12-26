@@ -40,6 +40,13 @@ defmodule Csvto.ReaderTest do
     end
   end
 
+  test "should set default value for empty non-required fields" do
+      assert Csvto.Reader.from(fixture_path("with_empty_fields.csv"), ReaderTest.TestCsvto, :by_name)
+          == [%{key: "key0", value: "value0", optional: "nil"},
+              %{key: "key1", value: "value1", optional: "nil"}]
+  end
+
+
   describe "by_name" do
     test "should convert csv with exact headers" do
       assert Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name) 

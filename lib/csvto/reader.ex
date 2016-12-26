@@ -196,6 +196,10 @@ defmodule Csvto.Reader do
     Enum.reduce(unspecified ++ unspecified_in_values, result, &(Map.put(&2, &1.name, &1.default)))
   end
 
+  defp do_cast_value(%{required?: false, default: default}, "", _opts) do
+    {:ok, default}
+  end
+
   defp do_cast_value(field, raw_value, opts) do
     case Csvto.Type.cast(field.type, raw_value, opts) do
       :error ->
