@@ -1,8 +1,29 @@
 # Csvto
 
-Convert csv file to elixir map with ease
+**Convert csv file to elixir map with ease**
 
-# Blueprint
+## Installation
+
+Add csvto to your list of dependencies in `mix.exs`
+
+  ```
+  # use the stable version
+  def deps do
+    [{:csvto, "~> 0.1"}]
+  end
+
+  # use the latest version
+  def deps do
+    [{:csvto, github: "secretworry/csvto.git", branch: :master}]
+  end
+        
+  # start csvto
+  defp application do
+    [applications: [:csvto]]
+  end
+  ```
+
+## Quick Example
 
 ```elixir
   defmodule MyCsvto do
@@ -18,7 +39,9 @@ Convert csv file to elixir map with ease
   end
 
   MyCsvto.from(path, :product) # returns [Map.t]
-  MyCsvto.from(path, :product, into: MyApp.Product) # returns [MyApp.Product.t]
-  MyCsvto.from(path, :product, headers: ~w{number name description price images}a) # returns {:error, reason}
-  MyCsvto.from(illegal_file, :product) # returns {:error, reason}
 ```
+
+## Special Notes
+
+* We are using the `csv` from its master branch, since we need their lastest feature which makes decoding a csv file with error possible
+
