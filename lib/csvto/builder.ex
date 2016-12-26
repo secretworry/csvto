@@ -238,7 +238,7 @@ defmodule Csvto.Builder do
 
   def __from__(schema_name) do
     quote do
-      def from(path, unquote(schema_name), opts) do
+      def from(path, unquote(schema_name), opts \\ []) do
         Csvto.Reader.from(__MODULE__, path, unquote(schema_name), opts)
       end
     end
