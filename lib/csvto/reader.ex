@@ -135,6 +135,7 @@ defmodule Csvto.Reader do
     raise_error(message)
   end
   defp do_add_context!({{:ok, row}, 0}, %{columns: nil, fields: fields, unspecified: unspecified_in_opts} = context) do
+    row = preprocess_row(row)
     {column_defs, missing} = Enum.map_reduce(row, fields, fn
       column_name, fields ->
         Map.get_and_update(fields, column_name, fn _ -> :pop end)
@@ -148,13 +149,12 @@ defmodule Csvto.Reader do
         raise_error("required fields #{Enum.join(required_fields, ",")} cannot be found in file #{context[:path]}")
     end
   end
-  defp do_add_context!({{:ok, row}, index}, context), do: {[{row, index, context}], context}
+  defp do_add_context!({{:ok, row}, index}, context), do: {[{row |> preprocess_row, index, context}], context}
 
   defp convert_row(stream) do
     stream
     |> Stream.map(&do_convert_row!/1)
   end
-
 
   def extract_name_of_required([]), do: []
   def extract_name_of_required(fields) do
@@ -205,6 +205,8 @@ defmodule Csvto.Reader do
   defp do_validate_value(module, %{validator: {method, opts}}, value) when is_atom(method) do
     apply(module, method, [value, opts]) |> process_validate_result(value)
   end
+
+  defp preprocess_row(row), do: row |> Enum.map(&(String.trim(&1)))
 
   defp process_validate_result({:ok, value}, _), do: {:ok, value}
   defp process_validate_result(:ok, value), do: {:ok, value}

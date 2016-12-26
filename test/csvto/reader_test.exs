@@ -83,6 +83,12 @@ defmodule Csvto.ReaderTest do
               %{key: "key1", value: "value1", optional: "nil"}]
     end
 
+    test "should convert csv with spaces without error" do
+      assert Csvto.Reader.from(fixture_path("with_spaces.csv"), ReaderTest.TestCsvto, :by_name)
+          == [%{key: "key0", value: "value0", optional: "optional0"},
+              %{key: "key1", value: "value1", optional: "optional1"}]
+    end
+
     test "should reject csv without required header" do
       assert_raise Csvto.Error, ~r/required fields key,value cannot be found in file .*/, fn ->
         Csvto.Reader.from!(fixture_path("without_required_fields.csv"), ReaderTest.TestCsvto, :by_name)
