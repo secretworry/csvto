@@ -9,7 +9,7 @@ Add csvto to your list of dependencies in `mix.exs`
   ```
   # use the stable version
   def deps do
-    [{:csvto, "~> 0.1"}]
+    [{:csvto, "~> 0.1.1"}]
   end
 
   # use the latest version
