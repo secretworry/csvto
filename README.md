@@ -41,7 +41,3 @@ Add csvto to your list of dependencies in `mix.exs`
   MyCsvto.from(path, :product) # returns [Map.t]
 ```
 
-## Special Notes
-
-* We are using the `csv` from its master branch, since we need their lastest feature which makes decoding a csv file with error possible
-

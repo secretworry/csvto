@@ -4,6 +4,8 @@ defmodule Csvto.Reader do
 
   @type context :: %{path: String.t, columns: [column_def], schema: Csvto.Schema.t, fields: %{String.t => Csvto.Field.t}, unspecified: [Csvto.Field.t], opts: Map.t}
 
+  @csv_errors [CSV.Parser.SyntaxError, CSV.Lexer.EncodingError, CSV.Decoder.RowLengthError, CSV.LineAggregator.CorruptStreamError]
+
   @doc """
   Read from csv specified by path and convert to stream of map accoriding to given schema
   """
@@ -13,11 +15,20 @@ defmodule Csvto.Reader do
     rescue
       x in Csvto.Error ->
         {:error, x.message}
+      x in @csv_errors ->
+        {:error, x.message}
     end
+
   end
 
   def from!(path, module, schema_name, opts \\ []) do
-    do_from!(path, module, schema_name, opts) |> Enum.to_list
+    try do
+      do_from!(path, module, schema_name, opts) |> Enum.to_list
+    rescue
+      x in @csv_errors ->
+        stacktrace = System.stacktrace
+        reraise Csvto.Error, [message: x.message], stacktrace
+    end
   end
 
   defp do_from!(path, module, schema_name, opts) do
@@ -131,10 +142,7 @@ defmodule Csvto.Reader do
     column_defs
   end
 
-  defp do_add_context!({{:error, message}, _index}, _context) do
-    raise_error(message)
-  end
-  defp do_add_context!({{:ok, row}, 0}, %{columns: nil, fields: fields, unspecified: unspecified_in_opts} = context) do
+  defp do_add_context!({row, 0}, %{columns: nil, fields: fields, unspecified: unspecified_in_opts} = context) do
     row = preprocess_row(row)
     {column_defs, missing} = Enum.map_reduce(row, fields, fn
       column_name, fields ->
@@ -149,7 +157,7 @@ defmodule Csvto.Reader do
         raise_error("required fields #{Enum.join(required_fields, ",")} cannot be found in file #{context[:path]}")
     end
   end
-  defp do_add_context!({{:ok, row}, index}, context), do: {[{row |> preprocess_row, index, context}], context}
+  defp do_add_context!({row, index}, context), do: {[{row |> preprocess_row, index, context}], context}
 
   defp convert_row(stream) do
     stream

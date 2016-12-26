@@ -53,7 +53,7 @@ defmodule Csvto.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:csv, github: "beatrichartz/csv", branch: :master},
+    [{:csv, "~> 1.4.4"},
      {:decimal, "~> 1.3.1"},
      {:timex, "~> 3.1.5"},
      {:ex_doc, ">= 0.0.0", only: :dev}]
