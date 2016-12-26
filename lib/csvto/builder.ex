@@ -61,8 +61,8 @@ defmodule Csvto.Builder do
   @type t :: struct
 
   defmacro __using__(_opts) do
+    Module.register_attribute(__CALLER__.module, :csvto_schemas, accumulate: true)
     quote do
-      Module.register_attribute(__MODULE__, :csvto_schemas, accumulate: true)
       import Csvto.Builder, only: [csv: 2]
       @before_compile unquote(__MODULE__)
     end
@@ -79,31 +79,32 @@ defmodule Csvto.Builder do
   end
 
   defmacro csv(name, [do: block]) do
-    quote do
-      Module.register_attribute(__MODULE__, :csvto_fields, accumulate: false)
-      Module.register_attribute(__MODULE__, :csvto_field_index, accumulate: false)
-      Module.register_attribute(__MODULE__, :csvto_index_mode, accumulate: false)
-      Module.register_attribute(__MODULE__, :csvto_schema, accumulate: false)
-      Module.put_attribute(__MODULE__, :csvto_fields, [])
-      Module.put_attribute(__MODULE__, :csvto_field_index, -1)
-      Module.put_attribute(__MODULE__, :csvto_index_mode, nil)
-      Module.put_attribute(__MODULE__, :csvto_schema, unquote(name))
-      name = unquote(name)
-      try do
-        import Csvto.Builder
-        unquote(block)
-      after
-        :ok
-      end
-      csvto_fields = Module.get_attribute(__MODULE__, :csvto_fields) |> Enum.reverse
-      index_mode = Module.get_attribute(__MODULE__, :csvto_index_mode)
-      schema = Csvto.Builder.build_schema(__MODULE__, name, index_mode, csvto_fields)
-      Module.put_attribute(__MODULE__, :csvto_schemas, schema)
-      Module.eval_quoted __ENV__, [
-        Csvto.Builder.__schema__(name, schema),
-        Csvto.Builder.__from__(name)
-      ]
-    end
+    module = __CALLER__.module
+    Module.register_attribute(module, :csvto_fields, accumulate: false)
+    Module.register_attribute(module, :csvto_field_index, accumulate: false)
+    Module.register_attribute(module, :csvto_index_mode, accumulate: false)
+    Module.register_attribute(module, :csvto_schema, accumulate: false)
+    Module.put_attribute(module, :csvto_fields, [])
+    Module.put_attribute(module, :csvto_field_index, -1)
+    Module.put_attribute(module, :csvto_index_mode, nil)
+    Module.put_attribute(module, :csvto_schema, name)
+    {_, validators} = escape(module, __CALLER__.file, block)
+    csvto_fields = Module.get_attribute(module, :csvto_fields) |> Enum.reverse
+    index_mode = Module.get_attribute(module, :csvto_index_mode)
+    schema = Csvto.Builder.build_schema(module, name, index_mode, csvto_fields)
+    Module.put_attribute(module, :csvto_schemas, schema)
+    [Csvto.Builder.__schema__(name, schema),
+     Csvto.Builder.__from__(name)] ++
+     validators
+  end
+
+  defp escape(module, file, block) do
+    Macro.prewalk(block, [], fn
+      {:field, env, args} = node, acc ->
+        {node, [apply(__MODULE__, :__field__, [module, file, Keyword.get(env, :line)| args]) | acc]}
+      node, acc ->
+        {node, acc}
+    end)
   end
 
   def build_schema(module, name, _index_mode, []), do: raise ArgumentError, "no field are defined for schema #{name} in #{inspect module}"
@@ -116,39 +117,30 @@ defmodule Csvto.Builder do
     %Csvto.Schema{module: module, name: name, index_mode: index_mode, fields: fields}
   end
 
-  defmacro field(name, type \\ :string, opts \\ []) do
-    file = __CALLER__.file
-    line = __CALLER__.line
-    quote do
-      meta = %{
-        module: __MODULE__,
-        field_index: Module.get_attribute(__MODULE__, :csvto_field_index) + 1,
-        index_mode: Module.get_attribute(__MODULE__, :csvto_index_mode),
-        schema: Module.get_attribute(__MODULE__, :scvto_schemaa),
-        file: unquote(file),
-        line: unquote(line)
-      }
-      {index_mode, validator} = Csvto.Builder.__field__(meta, unquote(name), unquote(type), unquote(opts))
-      Module.put_attribute(__MODULE__, :csvto_field_index, meta[:field_index])
-      Module.put_attribute(__MODULE__, :csvto_index_mode, index_mode)
-      validator
-    end
-  end
-
-  def __field__(meta, name, type, opts) do
+  def __field__(module, file, line, name, type, opts \\ []) do
+    meta = %{
+      module: module,
+      field_index: Module.get_attribute(module, :csvto_field_index) + 1,
+      index_mode: Module.get_attribute(module, :csvto_index_mode),
+      schema: Module.get_attribute(module, :csvto_schema),
+      file: file,
+      line: line
+    }
     check_type!(meta, name, type)
     index_mode = check_index_mode!(meta, name, meta[:index_mode], opts)
     fields = Module.get_attribute(meta[:module], :csvto_fields)
     check_duplicate_declaration!(meta, fields, name)
     {validator, code} = convert_validator(meta, name, opts)
-    field = build_field(meta, name, type, index_mode, validator, opts)
-    Module.put_attribute(meta[:module], :csvto_fields, [field|fields])
-    {index_mode, code}
+    field = build_field(name, type, index_mode, validator, opts)
+    Module.put_attribute(module, :csvto_fields, [field|fields])
+    Module.put_attribute(module, :csvto_field_index, meta[:field_index])
+    Module.put_attribute(module, :csvto_index_mode, index_mode)
+    code
   end
 
-  defp build_field(meta, name, type, index_mode, validator, opts) do
+  defp build_field(name, type, index_mode, validator, opts) do
     default = default_for_type(type, opts)
-    field_opts = opts |> Enum.into(%{}) |> Map.drop(~w{required name}a)
+    field_opts = opts |> Enum.into(%{}) |> Map.drop(~w{required name validator}a)
     field_index = case index_mode do
       :name -> nil
       {:index, index} -> index
@@ -161,9 +153,7 @@ defmodule Csvto.Builder do
       field_index: field_index,
       validator: validator,
       default: default,
-      opts: field_opts,
-      line: meta[:line],
-      file: meta[:file]
+      opts: field_opts
     }
   end
 
@@ -180,7 +170,7 @@ defmodule Csvto.Builder do
     case Keyword.get(opts, :validator) do
       nil ->
         {nil, nil}
-      validator when is_function(validator, 1) ->
+      {:&, _, _} = validator ->
         do_define_validator_fun_1(meta[:schema], name, validator)
       validator when is_atom(validator) ->
         {validator, nil}
@@ -192,9 +182,9 @@ defmodule Csvto.Builder do
   end
 
   defp do_define_validator_fun_1(schema, name, validator) do
-    validator_name = "__csvto_validate_#{schema}_#{name}__"
+    validator_name = "__csvto_validate_#{schema}_#{name}__" |> String.to_atom
     {validator_name, quote do
-      def unquote(validator_name)(value), do: unquote(validator)(value)
+      def unquote(validator_name)(value), do: (unquote(validator)).(value)
     end}
   end
 

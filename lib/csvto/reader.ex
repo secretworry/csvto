@@ -207,7 +207,7 @@ defmodule Csvto.Reader do
   defp do_validate_value(_module, %{validator: nil}, value), do: {:ok, value}
 
   defp do_validate_value(module, %{validator: method}, value) when is_atom(method) do
-    apply(module, method, value) |> process_validate_result(value)
+    apply(module, method, [value]) |> process_validate_result(value)
   end
 
   defp do_validate_value(module, %{validator: {method, opts}}, value) when is_atom(method) do

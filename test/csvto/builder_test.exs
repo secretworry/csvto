@@ -15,6 +15,7 @@ defmodule Csvto.BuilderTest do
       field :n10, :string, index: 10
       field :n11, :string
     end
+
   end
 
   test "should export __csvto__(:schema, schema_name)" do
@@ -110,5 +111,26 @@ defmodule Csvto.BuilderTest do
     assert_only ~w{field_index field_name},
                 schema.fields,
                 [%{field_index: nil, field_name: "Name0"}, %{field_index: nil, field_name: "Name1"}]
+  end
+
+  test "should define field with validator" do
+    defmodule Validator do
+      use Csvto.Builder
+      csv :with_validator do
+        field :inline_validator, :integer, validator: &(&1 >= 0)
+        field :validator_without_opts, :integer, validator: :validate_integer
+        field :validator_with_opts, :integer, validator: {:validate_integer, 5}
+      end
+
+      def validate_integer(value), do: value >= 0
+
+      def validate_integer(value, opts), do: value >= opts
+    end
+    schema = Validator.__csvto__(:schema, :with_validator)
+    assert_only ~w{validator},
+                schema.fields,
+                [%{validator: :__csvto_validate_with_validator_inline_validator__},
+                 %{validator: :validate_integer},
+                 %{validator: {:validate_integer, 5}}]
   end
 end

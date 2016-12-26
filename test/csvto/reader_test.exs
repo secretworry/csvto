@@ -135,4 +135,53 @@ defmodule Csvto.ReaderTest do
               %{key: "key1", value: "value1", optional: "optional1"}]
     end
   end
+
+  describe "validator tests" do
+    test "report illegal value with inline validator" do
+
+      defmodule InlineValidator do
+        use Csvto.Builder
+        csv :schema do
+          field :key, :string
+          field :value, :integer, validator: &(&1 > 0)
+        end
+      end
+
+      assert_raise Csvto.Error, ~r/illegal value \"0\" in file [^ ]* at line 2, column 2: validation error for 0/, fn ->
+        Csvto.Reader.from!(fixture_path("integer_validator_test.csv"), ReaderTest.InlineValidator, :schema)
+      end
+    end
+
+    test "report illegal value with method validator" do
+      defmodule MethodValidator do
+        use Csvto.Builder
+        csv :schema do
+          field :key, :string
+          field :value, :integer, validator: :validate_integer
+        end
+
+        def validate_integer(value), do: value > 0
+      end
+
+      assert_raise Csvto.Error, ~r/illegal value \"0\" in file [^ ]* at line 2, column 2: validation error for 0/, fn ->
+        Csvto.Reader.from!(fixture_path("integer_validator_test.csv"), ReaderTest.MethodValidator, :schema)
+      end
+    end
+
+    test "report illegal value with method validator with args" do
+      defmodule MethodWithArgsValidator do
+        use Csvto.Builder
+        csv :schema do
+          field :key, :string
+          field :value, :integer, validator: {:validate_integer, 0}
+        end
+
+        def validate_integer(value, min), do: value > min
+      end
+
+      assert_raise Csvto.Error, ~r/illegal value \"0\" in file [^ ]* at line 2, column 2: validation error for 0/, fn ->
+        Csvto.Reader.from!(fixture_path("integer_validator_test.csv"), ReaderTest.MethodWithArgsValidator, :schema)
+      end
+    end
+  end
 end
