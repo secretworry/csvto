@@ -32,6 +32,8 @@ defmodule Csvto.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:csv, "~> 1.4.2"}]
+    [{:csv, "~> 1.4.2"},
+     {:decimal, "~> 1.3.1"},
+     {:timex, "~> 3.1.5"}]
   end
 end
