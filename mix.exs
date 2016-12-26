@@ -24,7 +24,7 @@ defmodule Csvto.Mixfile do
   defp package do
     [
       name: :csvto,
-      files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["dusiyh@gmail.com"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/secretworry/csvto"}
