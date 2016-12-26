@@ -31,7 +31,13 @@ defmodule Csvto.ReaderTest do
   end
 
   test "should reject illegal header option" do
+    assert_raise ArgumentError, "specified header :not_exist cannot be found on schema :by_name", fn->
+      Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name, headers: ~w[not_exist]a)
+    end
 
+    assert_raise ArgumentError, "cannot find field :not_exist on schema :by_name", fn->
+      Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name, headers: %{"NotExist" => :not_exist})
+    end
   end
 
   describe "by_name" do

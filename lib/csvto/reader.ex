@@ -79,7 +79,7 @@ defmodule Csvto.Reader do
     {fields, unspecified} = Enum.reduce(headers, {Map.new, fields_by_name}, fn
       {field_name, name}, {map, fields_by_name} ->
         case Map.get(fields_by_name, name) do
-          nil -> raise ArgumentError, "cannot find field #{inspect name} on schema #{schema.name}"
+          nil -> raise ArgumentError, "cannot find field #{inspect name} on schema #{inspect schema.name}"
           field ->
             fields_by_name = Map.drop(fields_by_name, [name])
             {Map.put(map, field_name, field), fields_by_name}
