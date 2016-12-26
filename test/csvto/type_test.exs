@@ -3,6 +3,16 @@ defmodule Csvto.TypeTest do
 
   import Csvto.Type
 
+
+  describe "primitive?/1" do
+    test "should return true for primitive types" do
+      for type <- base_types() do
+        assert primitive?(type)
+        assert primitive?({:array, type})
+      end
+    end
+  end
+
   describe "cast/2" do
 
     test "should cast value" do

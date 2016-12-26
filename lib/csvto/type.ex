@@ -1,7 +1,9 @@
 defmodule Csvto.Type do
 
   @base      ~w(integer float boolean string binary decimal naive_datetime datetime date time)a
-  @composite ~w(array)
+  @composite ~w(array)a
+
+  def base_types(), do: @base
 
   def primitive?({composite, _}) when composite in @composite, do: true
   def primitive?(base) when base in @base, do: true

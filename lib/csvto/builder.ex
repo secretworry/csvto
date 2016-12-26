@@ -23,11 +23,11 @@ defmodule Csvto.Builder do
 
   When defining a schema, types of fields need to be given. The data comming from a csv file will be validated and casted
   according to specified type.
-  Types are split into two categories, simple type and compositional type
+  Types are split into two categories, base type and compositional type
 
-  ### Simple types
+  ### Base types
 
-  The simple types are
+  The base types are
   Type                      | Value example
   :-------------------------|:------------------------------------
   `:integer`                | 1, 2, 3
