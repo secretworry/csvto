@@ -70,11 +70,33 @@ defmodule Csvto.Builder do
 
   defmacro __before_compile__(env) do
     schemas = Module.get_attribute(env.module, :csvto_schemas) |> Enum.reverse
+    schema_reflections = Enum.map(schemas, &quote_define_schema_reflection/1)
+    schema_froms = Enum.map(schemas, &quote_define_from/1)
     quote do
       def __csvto__(:schemas), do: unquote(schemas |> Macro.escape)
+      unquote(schema_reflections)
       def __csvto__(:schema, schema) do
         raise ArgumentError, "undefined schema #{schema} for #{inspect __MODULE__}"
       end
+      def from(path, schema, opts \\ [])
+      unquote(schema_froms)
+      def from(path, schema, opts) do
+        raise ArgumentError, "undefined schema #{schema} for #{inspect __MODULE__}"
+      end
+    end
+  end
+
+  defp quote_define_schema_reflection(schema) do
+    name = schema.name
+    quote do
+      def __csvto__(:schema, unquote(name)), do: unquote(schema |> Macro.escape)
+    end
+  end
+
+  defp quote_define_from(schema) do
+    name = schema.name
+    quote do
+      def from(path, unquote(name), opts), do: unquote(:"__from_#{name}__")(path, opts)
     end
   end
 
@@ -93,9 +115,8 @@ defmodule Csvto.Builder do
     index_mode = Module.get_attribute(module, :csvto_index_mode)
     schema = Csvto.Builder.build_schema(module, name, index_mode, csvto_fields)
     Module.put_attribute(module, :csvto_schemas, schema)
-    [Csvto.Builder.__schema__(name, schema),
-     Csvto.Builder.__from__(name)] ++
-     validators
+    [Csvto.Builder.__from__(name)] ++
+    validators
   end
 
   defp escape(module, file, block) do
@@ -238,7 +259,7 @@ defmodule Csvto.Builder do
 
   def __from__(schema_name) do
     quote do
-      def from(path, unquote(schema_name), opts \\ []) do
+      def unquote(:"__from_#{schema_name}__")(path, opts) do
         Csvto.Reader.from(path, __MODULE__, unquote(schema_name), opts)
       end
     end
