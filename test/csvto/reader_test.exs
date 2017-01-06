@@ -24,6 +24,19 @@ defmodule Csvto.ReaderTest do
       field :value, :string, index: 3
       field :optional, :string, required: false, default: "nil"
     end
+
+    csv :by_name_with_aggregators do
+      field :key, :string, name: "Key"
+      field :value, :string, name: "Value"
+      fields :aggs0, :array, name: "Aggs0"
+      fields :aggs1, :array, name: "Aggs1"
+    end
+
+    csv :by_index_with_aggregator do
+      field :key, :string
+      field :value, :string
+      fields :extra, :array
+    end
   end
 
   def fixture_path(name) do
@@ -31,7 +44,7 @@ defmodule Csvto.ReaderTest do
   end
 
   test "should reject illegal header option" do
-    assert_raise ArgumentError, "specified header :not_exist cannot be found on schema :by_name", fn->
+    assert_raise ArgumentError, "the specified header :not_exist cannot be found on schema :by_name", fn->
       Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name, headers: ~w[not_exist]a)
     end
 
@@ -189,6 +202,24 @@ defmodule Csvto.ReaderTest do
       assert_raise Csvto.Error, ~r/illegal value \"0\" in file [^ ]* at line 2, column 2: validation error for 0/, fn ->
         Csvto.Reader.from!(fixture_path("integer_validator_test.csv"), ReaderTest.MethodWithArgsValidator, :schema)
       end
+    end
+  end
+
+  describe "by_name_with_aggregators" do
+    test "should aggregate aggregate fields" do
+      assert Csvto.Reader.from(fixture_path("with_aggregate_fields.csv"), ReaderTest.TestCsvto, :by_name_with_aggregators)
+          == [%{aggs0: ["aggs000", "aggs010", "aggs020"],
+                aggs1: ["aggs100", "aggs110", "aggs120"], key: "key0", value: "value0"},
+              %{aggs0: ["aggs001", "aggs011", "aggs021"],
+                aggs1: ["aggs101", "aggs111", "aggs121"], key: "key1", value: "value1"}]
+    end
+  end
+
+  describe "by_index_with_aggregator" do
+    test "should aggregate remaining fields" do
+      assert Csvto.Reader.from(fixture_path("headerless_with_extra_fields.csv"), ReaderTest.TestCsvto, :by_index_with_aggregator)
+          == [%{extra: ["optional0", "extra0"], key: "key0", value: "value0"},
+              %{extra: ["optional1", "extra1"], key: "key1", value: "value1"}]
     end
   end
 end
