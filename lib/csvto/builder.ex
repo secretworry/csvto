@@ -122,7 +122,9 @@ defmodule Csvto.Builder do
   defp escape(module, file, block) do
     Macro.prewalk(block, [], fn
       {:field, env, args} = node, acc ->
-        {node, [apply(__MODULE__, :__field__, [module, file, Keyword.get(env, :line)| args]) | acc]}
+        {node, [apply(__MODULE__, :__define_field__, [module, file, Keyword.get(env, :line), :single | args]) | acc]}
+      {:fields, env, args} = node, acc ->
+        {node, [apply(__MODULE__, :__define_field__, [module, file, Keyword.get(env, :line), :aggregate | args]) | acc]}
       node, acc ->
         {node, acc}
     end)
@@ -138,9 +140,10 @@ defmodule Csvto.Builder do
     %Csvto.Schema{module: module, name: name, index_mode: index_mode, fields: fields}
   end
 
-  def __field__(module, file, line, name, type, opts \\ []) do
+  def __define_field__(module, file, line, field_type, name, type, opts \\ []) do
     meta = %{
       module: module,
+      field_type: field_type,
       field_index: Module.get_attribute(module, :csvto_field_index) + 1,
       index_mode: Module.get_attribute(module, :csvto_index_mode),
       schema: Module.get_attribute(module, :csvto_schema),
@@ -227,6 +230,7 @@ defmodule Csvto.Builder do
         raise ArgumentError, "cannot define name option for field #{inspect field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
     end
   end
+
   defp check_index_mode!(meta, field_name, :name, opts) do
     case Keyword.get(opts, :name) do
       nil ->
@@ -238,7 +242,17 @@ defmodule Csvto.Builder do
 
   defp check_type!(meta, field_name, type) do
     if Csvto.Type.primitive?(type) do
-      type
+      case meta[:field_type] do
+        :single ->
+          type
+        :aggregate ->
+          cond do
+            Csvto.Type.array?(type) ->
+              type
+            true ->
+              raise ArgumentError, "invalid type #{inspect type} for aggregate field defined on line #{meta[:line]}, expect {:array, type} but got #{inspect type}"
+          end
+      end
     else
       raise ArgumentError, "invalid type #{inspect type} for field #{inspect field_name} defined on line #{meta[:line]}"
     end

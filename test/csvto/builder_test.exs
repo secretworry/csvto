@@ -133,4 +133,15 @@ defmodule Csvto.BuilderTest do
                  %{validator: :validate_integer},
                  %{validator: {:validate_integer, 5}}]
   end
+
+  test "should raise error for fields define as type other than {:array, type}" do
+    assert_raise ArgumentError, ~r/invalid type :string for aggregate field defined on line \d+, expect {:array, type} but got :string/, fn ->
+      defmodule IllegalFieldsType do
+        use Csvto.Builder
+        csv :illegal_fields_type do
+          fields :fields, :string, name: "Category"
+        end
+      end
+    end
+  end
 end

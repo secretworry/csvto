@@ -9,6 +9,10 @@ defmodule Csvto.Type do
   def primitive?(base) when base in @base, do: true
   def primitive?(_), do: false
 
+  def array?(:array), do: true
+  def array?({:array, _}), do: true
+  def array?(_), do: false
+
   def cast(:integer, value, _opts) do
     case Integer.parse(value) do
       {int, ""} -> {:ok, int}
