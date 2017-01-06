@@ -1,7 +1,7 @@
 defmodule Csvto.Mixfile do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.1.2"
 
   def project do
     [app: :csvto,
@@ -43,15 +43,6 @@ defmodule Csvto.Mixfile do
   defp elixirc_paths(_), do: elixirc_paths
   defp elixirc_paths, do: ["lib"]
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
   defp deps do
     [{:csv, "~> 1.4.4"},
      {:decimal, "~> 1.3.1"},
