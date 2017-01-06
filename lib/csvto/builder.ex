@@ -147,22 +147,23 @@ defmodule Csvto.Builder do
       field_index: Module.get_attribute(module, :csvto_field_index) + 1,
       index_mode: Module.get_attribute(module, :csvto_index_mode),
       schema: Module.get_attribute(module, :csvto_schema),
+      fields: Module.get_attribute(module, :csvto_fields),
       file: file,
       line: line
     }
     check_type!(meta, name, type)
-    index_mode = check_index_mode!(meta, name, meta[:index_mode], opts)
-    fields = Module.get_attribute(meta[:module], :csvto_fields)
-    check_duplicate_declaration!(meta, fields, name)
+    meta = check_index_mode!(meta, name, opts)
+    check_duplicate_declaration!(meta, name)
+    check_aggregate_field!(meta, name, type, opts)
     {validator, code} = convert_validator(meta, name, opts)
-    field = build_field(name, type, index_mode, validator, opts)
-    Module.put_attribute(module, :csvto_fields, [field|fields])
+    field = build_field(field_type, name, type, meta[:index_mode], validator, opts)
+    Module.put_attribute(module, :csvto_fields, [field|meta[:fields]])
     Module.put_attribute(module, :csvto_field_index, meta[:field_index])
-    Module.put_attribute(module, :csvto_index_mode, index_mode)
+    Module.put_attribute(module, :csvto_index_mode, meta[:index_mode])
     code
   end
 
-  defp build_field(name, type, index_mode, validator, opts) do
+  defp build_field(field_type, name, type, index_mode, validator, opts) do
     default = default_for_type(type, opts)
     field_opts = opts |> Enum.into(%{}) |> Map.drop(~w{required name validator}a)
     field_index = case index_mode do
@@ -172,6 +173,7 @@ defmodule Csvto.Builder do
     %Csvto.Field{
       name: name,
       type: type,
+      field_type: field_type,
       required?: Keyword.get(opts, :required, true),
       field_name: Keyword.get(opts, :name),
       field_index: field_index,
@@ -181,8 +183,8 @@ defmodule Csvto.Builder do
     }
   end
 
-  defp check_duplicate_declaration!(meta, fields, name) do
-    case Enum.find(fields, &(&1.name == name)) do
+  defp check_duplicate_declaration!(meta, name) do
+    case Enum.find(meta[:fields], &(&1.name == name)) do
       nil ->
         :ok
       field ->
@@ -212,32 +214,35 @@ defmodule Csvto.Builder do
     end}
   end
 
-  defp check_index_mode!(_meta, _name, nil, opts) do
-    case Keyword.get(opts, :name) do
+  defp check_index_mode!(%{index_mode: nil} = meta, _name, opts) do
+    index_mode = case Keyword.get(opts, :name) do
       nil ->
         {:index, 0}
       _ ->
         :name
     end
+    %{meta | index_mode: index_mode}
   end
 
-  defp check_index_mode!(meta, field_name, {:index, index}, opts) do
-    case Keyword.get(opts, :name) do
+  defp check_index_mode!(%{index_mode: {:index, index}} = meta, field_name, opts) do
+    index_mode = case Keyword.get(opts, :name) do
       nil ->
         index = Keyword.get(opts, :index, index + 1)
         {:index, index}
       _name ->
         raise ArgumentError, "cannot define name option for field #{inspect field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
     end
+    %{meta | index_mode: index_mode}
   end
 
-  defp check_index_mode!(meta, field_name, :name, opts) do
-    case Keyword.get(opts, :name) do
+  defp check_index_mode!(%{index_mode: :name} = meta, field_name, opts) do
+    index_mode = case Keyword.get(opts, :name) do
       nil ->
         raise ArgumentError, "forget to define name option for field #{inspect field_name} defined on #{meta.line}, either all fields or none of them should declare name option"
       _name ->
         :name
     end
+    %{meta | index_mode: index_mode}
   end
 
   defp check_type!(meta, field_name, type) do
@@ -257,6 +262,45 @@ defmodule Csvto.Builder do
       raise ArgumentError, "invalid type #{inspect type} for field #{inspect field_name} defined on line #{meta[:line]}"
     end
   end
+
+  defp check_aggregate_field!(%{field_type: :aggregate} = meta, field_name, _type, opts) do
+    case meta[:index_mode] do
+      {:index, _} ->
+        if _another_aggrate_field = Enum.find(meta[:fields], &(&1.field_type == :aggregate)) do
+          raise ArgumentError, "more than one aggregate field in #{inspect meta[:schema]}: only one aggrate field can be defined in the index mode"
+        end
+        :ok
+      :name ->
+        name = case Keyword.fetch(opts, :name) do
+          {:ok, name} ->
+            name
+          :error ->
+            raise ArgumentError, "name option is required for the aggregate field #{inspect field_name}"
+        end
+        if name_conflict_field = Enum.find(meta[:fields], &has_conflict_name?(name, &1)) do
+          raise ArgumentError, "the name option of field #{inspect field_name} conflicts with the field #{inspect name_conflict_field.name}: #{name} and #{name_conflict_field.field_name} overlap each other"
+        end
+        :ok
+    end
+  end
+
+  defp check_aggregate_field!(meta, _field_name, _type, _opts) do
+    case meta[:index_mode] do
+      {:index, _} ->
+        if preceding_aggregate_field = Enum.find(meta[:fields], &(&1.field_type == :aggregate)) do
+          raise ArgumentError, "#{inspect preceding_aggregate_field.name} should be the last field: aggregate field can only be the last field in index mode"
+        end
+        :ok
+      _ ->
+        :ok
+    end
+  end
+
+  defp has_conflict_name?(name, %{field_type: :aggregate, field_name: another_name}) do
+    String.starts_with?(name, another_name) || String.starts_with?(another_name, name)
+  end
+
+  defp has_conflict_name?(_name, _field), do: false
 
   defp default_for_type(_, opts) do
     Keyword.get(opts, :default)
