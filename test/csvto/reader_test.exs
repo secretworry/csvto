@@ -35,7 +35,7 @@ defmodule Csvto.ReaderTest do
     csv :by_index_with_aggregator do
       field :key, :string
       field :value, :string
-      fields :extra, :array
+      fields :extra, {:array, :string}
     end
   end
 

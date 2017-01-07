@@ -305,7 +305,7 @@ defmodule Csvto.Reader do
       :array ->
         {:ok, raw_value}
       {:array, subtype} ->
-        do_cast_value(subtype, raw_value)
+        do_cast_value(subtype, raw_value, field.type)
     end
   end
 
