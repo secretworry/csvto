@@ -59,6 +59,16 @@ defmodule Csvto.ReaderTest do
               %{key: "key1", value: "value1", optional: "nil"}]
   end
 
+  test "should return __line__ in the result if line_number: true is given" do
+      assert Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name, line_number: true)
+          == [%{key: "key0", value: "value0", optional: "optional0", __line__: 2},
+              %{key: "key1", value: "value1", optional: "optional1", __line__: 3}]
+
+      assert Csvto.Reader.from(fixture_path("exact_headers.csv"), ReaderTest.TestCsvto, :by_name, line_number: :line_number)
+          == [%{key: "key0", value: "value0", optional: "optional0", line_number: 2},
+              %{key: "key1", value: "value1", optional: "optional1", line_number: 3}]
+  end
+
 
   describe "by_name" do
     test "should convert csv with exact headers" do

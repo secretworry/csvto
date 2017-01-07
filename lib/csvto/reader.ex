@@ -268,7 +268,7 @@ defmodule Csvto.Reader do
       required_fields ->
         raise_error("required fields #{Enum.join(required_fields, ",")} is missing on file #{context[:path]}, line #{index + 1}")
     end
-    result = value_and_fields |> Enum.with_index |> Enum.reduce(Map.new, fn
+    result = value_and_fields |> Enum.with_index |> Enum.reduce(init_result(row, index, context), fn
       {{_raw_value, nil}, _}, map ->
         map
       {{raw_value, field}, column_index}, map ->
@@ -285,6 +285,18 @@ defmodule Csvto.Reader do
       Map.put(result, aggregate_column.name, cast_aggregate_value!(context, index, aggregate_column, extra_values))
     else
       result
+    end
+  end
+
+  defp init_result(_row, index, context) do
+    if key = Map.get(context.opts, :line_number, false) do
+      key = case key do
+        true -> :__line__
+        key -> key
+      end
+      %{key => index + 1}
+    else
+      Map.new
     end
   end
 
