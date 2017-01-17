@@ -44,11 +44,11 @@ defmodule Csvto.Type do
   def cast(:string, value, _opts), do: {:ok, value}
   def cast(:binary, value, _opts), do: {:ok, value}
   def cast(:decimal, value, _opts), do: Decimal.parse(value)
-  def cast(:naive_datetime, value, _opts) do
-    cast_naive_datetime(value)
+  def cast(:naive_datetime, value, opts) do
+    cast_naive_datetime(value, opts)
   end
-  def cast(:datetime, value, _opts) do
-    case cast_naive_datetime(value) do
+  def cast(:datetime, value, opts) do
+    case cast_naive_datetime(value, opts) do
       {:ok, %NaiveDateTime{year: year, month: month, day: day,
                            hour: hour, minute: minute, second: second, microsecond: microsecond}} ->
         {:ok, %DateTime{year: year, month: month, day: day,
@@ -61,17 +61,37 @@ defmodule Csvto.Type do
     end
   end
 
-  def cast(:date, value, _opts) do
-    case Date.from_iso8601(value) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
+  def cast(:date, value, opts) do
+    case Map.fetch(opts, :format) do
+      {:ok, format} ->
+        case do_parse_datetime(value, format) do
+          {:ok, naive_datetime} ->
+            {:ok, naive_datetime |> NaiveDateTime.to_date}
+          {:error, _} ->
+            :error
+        end
+      :error ->
+        case Date.from_iso8601(value) do
+          {:ok, _} = ok -> ok
+          {:error, _} -> :error
+        end
     end
   end
 
-  def cast(:time, value, _opts) do
-    case Time.from_iso8601(value) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
+  def cast(:time, value, opts) do
+    case Map.fetch(opts, :format) do
+      {:ok, format} ->
+        case do_parse_datetime(value, format) do
+          {:ok, naive_datetime} ->
+            {:ok, naive_datetime |> NaiveDateTime.to_time}
+          {:error, _} ->
+            :error
+        end
+      :error ->
+        case Time.from_iso8601(value) do
+          {:ok, _} = ok -> ok
+          {:error, _} -> :error
+        end
     end
   end
 
@@ -98,10 +118,27 @@ defmodule Csvto.Type do
     end)
   end
 
-  defp cast_naive_datetime(binary) when is_binary(binary) do
-    case NaiveDateTime.from_iso8601(binary) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
+  defp cast_naive_datetime(binary, opts) when is_binary(binary) do
+    case Map.fetch(opts, :format) do
+      {:ok, format} ->
+        case do_parse_datetime(binary, format) do
+          {:ok, _} = ok ->
+            ok
+          {:error, _} ->
+            :error
+        end
+      :error ->
+        case NaiveDateTime.from_iso8601(binary) do
+          {:ok, _} = ok -> ok
+          {:error, _} -> :error
+        end
     end
+  end
+
+  defp do_parse_datetime(binary, {parser, format}) do
+    Timex.parse(binary, format, parser)
+  end
+  defp do_parse_datetime(binary, format) when is_binary(format) do
+    Timex.parse(binary, format)
   end
 end
