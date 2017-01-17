@@ -37,6 +37,12 @@ defmodule Csvto.ReaderTest do
       field :value, :string
       fields :extra, {:array, :string}
     end
+
+    csv :keep_string do
+      field :key, :string, name: "Key", keep: true
+      field :value, :string, name: "Value", keep: true
+      fields :agg, :array, name: "Agg", keep: true
+    end
   end
 
   def fixture_path(name) do
@@ -230,6 +236,16 @@ defmodule Csvto.ReaderTest do
       assert Csvto.Reader.from(fixture_path("headerless_with_extra_fields.csv"), ReaderTest.TestCsvto, :by_index_with_aggregator)
           == [%{extra: ["optional0", "extra0"], key: "key0", value: "value0"},
               %{extra: ["optional1", "extra1"], key: "key1", value: "value1"}]
+    end
+  end
+
+  describe "keep_string" do
+    test "should keep original string" do
+      assert Csvto.Reader.from(fixture_path("keep_spaces.csv"), ReaderTest.TestCsvto, :keep_string)
+          == [%{agg: ["    agg00   ", "    agg10"], key: "    key0    ",
+                value: "       value0   "},
+              %{agg: ["    agg01   ", "    agg11"], key: "    key1    ",
+                value: "       value1   "}]
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Csvto.Field do
   @type field_type :: :single | :aggregate
 
   @type t :: %__MODULE__{
-    name: String.t,
+    name: atom,
     type: atom,
     field_type: field_type,
     required?: boolean,

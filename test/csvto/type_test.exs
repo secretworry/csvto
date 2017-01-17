@@ -13,6 +13,21 @@ defmodule Csvto.TypeTest do
     end
   end
 
+  describe "default/1" do
+    test "should return default values" do
+      assert default(:integer) == 0
+      assert default(:float) == 0.0
+      assert default(:decimal) == Decimal.new(0)
+      assert default(:string) == ""
+      assert default(:binary) == ""
+      assert default(:boolean) == false
+      assert default(:array) == []
+      assert default({:array, :integer}) == []
+      assert default(:date) == nil
+      assert default(:time) == nil
+    end
+  end
+
   describe "cast/2" do
 
     test "should cast value" do

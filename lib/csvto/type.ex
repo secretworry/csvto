@@ -14,6 +14,16 @@ defmodule Csvto.Type do
   def array?({:array, _}), do: true
   def array?(_), do: false
 
+  def default(:integer), do: 0
+  def default(:float), do: 0.0
+  def default(:boolean), do: false
+  def default(:string), do: ""
+  def default(:binary), do: ""
+  def default(:decimal), do: Decimal.new(0)
+  def default(:array), do: []
+  def default({:array, _}), do: []
+  def default(_), do: nil
+
   def cast(:integer, value, _opts) do
     case Integer.parse(value) do
       {int, ""} -> {:ok, int}

@@ -231,7 +231,7 @@ defmodule Csvto.Reader do
         raise_error("required fields #{Enum.join(required_fields, ",")} cannot be found in file #{context[:path]}")
     end
   end
-  defp do_add_context!({row, index}, context), do: {[{row |> preprocess_row, index, context}], context}
+  defp do_add_context!({row, index}, context), do: {[{row, index, context}], context}
 
   defp convert_row(stream) do
     stream
@@ -272,7 +272,7 @@ defmodule Csvto.Reader do
       {{_raw_value, nil}, _}, map ->
         map
       {{raw_value, field}, column_index}, map ->
-        with {:ok, value} <- do_cast_value(field, raw_value),
+        with {:ok, value} <- do_cast_value(context, field, raw_value),
              {:ok, value} <- do_validate_value(context[:schema].module, field, value) do
           update_map_value(map, field, value)
         else
@@ -308,35 +308,52 @@ defmodule Csvto.Reader do
     Map.put(map, field.name, value)
   end
 
-  defp do_cast_value(%{required?: false, default: default}, "") do
-    {:ok, default}
-  end
-
-  defp do_cast_value(%{field_type: :aggregate} = field, raw_value) do
+  defp do_cast_value(context, %{field_type: :aggregate} = field, raw_value) do
     case field.type do
       :array ->
         {:ok, raw_value}
       {:array, subtype} ->
-        do_cast_value(subtype, raw_value, field.type)
+        do_cast_value(subtype, raw_value, default_value(context, subtype, nil), field.opts)
     end
   end
 
-  defp do_cast_value(field, raw_value) when is_map(field) do
-    do_cast_value(field.type, raw_value, field.opts)
+  defp do_cast_value(context, field, raw_value) do
+    do_cast_value(field.type, raw_value, default_value(context, field.type, field.default), field.opts)
   end
 
-  defp do_cast_value(type, raw_value, opts) do
-    case Csvto.Type.cast(type, raw_value, opts) do
-      :error ->
-        {:error, "cast to #{inspect type} error"}
-      {:ok, _} = ok -> ok
+  defp do_cast_value(type, raw_value, default, opts) do
+    raw_value = maybe_trim(raw_value, type, Map.get(opts, :keep, false))
+    if raw_value == "" do
+      {:ok, default}
+    else
+      case Csvto.Type.cast(type, raw_value, opts) do
+        :error ->
+          {:error, "cast to #{inspect type} error"}
+        {:ok, _} = ok -> ok
+      end
     end
   end
+
+  defp default_value(context, type, nil) do
+    case Map.get(context.opts, :nilable, false) do
+      true ->
+        nil
+      false ->
+        Csvto.Type.default(type)
+    end
+  end
+
+  defp default_value(_context, _type, default), do: default
+
+  @keepable_types ~w{binary string}a
+
+  defp maybe_trim(raw_value, keepable_type, true) when keepable_type in @keepable_types, do: raw_value
+  defp maybe_trim(raw_value, _type, _keep), do: String.trim(raw_value)
 
   defp cast_aggregate_value!(context, index, aggregate_field, values) do
     values |> Enum.with_index(index) |> Enum.map(fn
       {raw_value, column_index} ->
-        case do_cast_value(aggregate_field, raw_value) do
+        case do_cast_value(context, aggregate_field, raw_value) do
           {:ok, value} ->
             value
           {:error, reason} ->
