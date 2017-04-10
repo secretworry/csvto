@@ -313,12 +313,12 @@ defmodule Csvto.Reader do
       :array ->
         {:ok, raw_value}
       {:array, subtype} ->
-        do_cast_value(subtype, raw_value, default_value(context, subtype, nil), field.opts)
+        do_cast_value(subtype, raw_value, default_value(context, subtype, nil, field.opts), field.opts)
     end
   end
 
   defp do_cast_value(context, field, raw_value) do
-    do_cast_value(field.type, raw_value, default_value(context, field.type, field.default), field.opts)
+    do_cast_value(field.type, raw_value, default_value(context, field.type, field.default, field.opts), field.opts)
   end
 
   defp do_cast_value(type, raw_value, default, opts) do
@@ -334,16 +334,21 @@ defmodule Csvto.Reader do
     end
   end
 
-  defp default_value(context, type, nil) do
-    case Map.get(context.opts, :nilable, false) do
-      true ->
-        nil
-      false ->
-        Csvto.Type.default(type)
+  defp default_value(context, type, nil, opts) do
+    nilable = case Map.fetch(opts, :nilable) do
+      :error ->
+        Map.get(context.opts, :nilable, false)
+      {:ok, value} ->
+        value
+    end
+    if nilable do
+      nil
+    else
+      Csvto.Type.default(type)
     end
   end
 
-  defp default_value(_context, _type, default), do: default
+  defp default_value(_context, _type, default, _opts), do: default
 
   @keepable_types ~w{binary string}a
 

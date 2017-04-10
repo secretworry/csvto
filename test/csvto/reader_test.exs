@@ -43,6 +43,10 @@ defmodule Csvto.ReaderTest do
       field :value, :string, name: "Value", keep: true
       fields :agg, :array, name: "Agg", keep: true
     end
+
+    csv :read_null_integer do
+      field :integer, :integer, name: "Value", default: nil, nilable: true
+    end
   end
 
   def fixture_path(name) do
@@ -246,6 +250,13 @@ defmodule Csvto.ReaderTest do
                 value: "       value0   "},
               %{agg: ["    agg01   ", "    agg11"], key: "    key1    ",
                 value: "       value1   "}]
+    end
+  end
+
+  describe "read_null_integer"do
+    test "should read integer as null" do
+      assert Csvto.Reader.from(fixture_path("null_integer.csv"), ReaderTest.TestCsvto, :read_null_integer)
+          == [%{integer: nil}, %{integer: 1}];
     end
   end
 end
