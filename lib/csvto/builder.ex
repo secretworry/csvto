@@ -28,6 +28,7 @@ defmodule Csvto.Builder do
   ### Base types
 
   The base types are
+
   Type                      | Value example
   :-------------------------|:------------------------------------
   `:integer`                | 1, 2, 3
