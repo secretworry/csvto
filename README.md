@@ -9,14 +9,14 @@ Add csvto to your list of dependencies in `mix.exs`
   ```
   # use the stable version
   def deps do
-    [{:csvto, "~> 0.1.2"}]
+    [{:csvto, "~> 0.1.3"}]
   end
 
   # use the latest version
   def deps do
     [{:csvto, github: "secretworry/csvto.git", branch: :master}]
   end
-        
+
   # start csvto
   defp application do
     [applications: [:csvto]]
@@ -41,3 +41,8 @@ Add csvto to your list of dependencies in `mix.exs`
   MyCsvto.from(path, :product) # returns [Map.t]
 ```
 
+## Documentation
+
+You can read more from our [Hexdocs](https://hexdocs.pm/csvto/api-reference.html)
+
+* Types that support can be found [here](https://hexdocs.pm/csvto/Csvto.Builder.html)
