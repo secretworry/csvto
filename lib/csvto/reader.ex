@@ -35,7 +35,7 @@ defmodule Csvto.Reader do
     schema = validate_schema_name!(module, schema_name)
     stream = build_stream!(path)
     stream
-    |> CSV.decode
+    |> CSV.decode!
     |> add_index_and_context!(path, schema, opts)
     |> convert_row
   end
@@ -160,7 +160,7 @@ defmodule Csvto.Reader do
       required_fields ->
         required_fields_missing_error(required_fields)
     end
-    {fields, aggregate_fields} = Enum.partition(name_and_fields, fn
+    {fields, aggregate_fields} = Enum.split_with(name_and_fields, fn
       {_, %{field_type: :aggregate}} -> false
       _ -> true
     end)
@@ -240,7 +240,7 @@ defmodule Csvto.Reader do
 
   def extract_name_of_required([]), do: []
   def extract_name_of_required(fields) do
-    Enum.filter_map(fields, &(&1.required?), &(&1.name))
+    fields |> Enum.filter(&(&1.required?)) |> Enum.map(&(&1.name))
   end
 
   defp filter_out_unused(fields_and_usage) do
